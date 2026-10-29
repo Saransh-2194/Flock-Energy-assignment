@@ -1,0 +1,145 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Flock Meter API",
+    "version": "1.0.0",
+    "description": "Read-only API facade over Urja Meter Ops. Upstream response schemas are provisional and passed through by the starter implementation."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8000"
+    }
+  ],
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Check API process health",
+        "responses": {
+          "200": {
+            "description": "API process is running"
+          }
+        }
+      }
+    },
+    "/api/v1/meters": {
+      "get": {
+        "tags": [
+          "meters"
+        ],
+        "summary": "Search and list meters",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream meter search JSON; schema pending"
+          },
+          "502": {
+            "description": "Upstream error"
+          }
+        }
+      }
+    },
+    "/api/v1/meters/{meter_id}/geo": {
+      "get": {
+        "tags": [
+          "meters"
+        ],
+        "summary": "Get meter geographic/network data",
+        "parameters": [
+          {
+            "name": "meter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream JSON; schema pending"
+          },
+          "502": {
+            "description": "Upstream error"
+          }
+        }
+      }
+    },
+    "/api/v1/meters/{meter_id}/energy": {
+      "get": {
+        "tags": [
+          "meters"
+        ],
+        "summary": "Get meter energy data",
+        "parameters": [
+          {
+            "name": "meter_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream JSON; schema pending"
+          },
+          "502": {
+            "description": "Upstream error"
+          }
+        }
+      }
+    },
+    "/api/v1/transformers": {
+      "get": {
+        "tags": [
+          "transformers"
+        ],
+        "summary": "List transformers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Upstream JSON; schema pending"
+          },
+          "502": {
+            "description": "Upstream error"
+          }
+        }
+      }
+    }
+  }
+}
