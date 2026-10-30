@@ -22,12 +22,17 @@ API consumer -> FastAPI routes -> PortalClient (httpx session) -> Urja Meter Ops
 │   ├── main.py
 │   └── portal_client.py
 ├── tests/
+│   ├── conftest.py  
+│   └── test_*.py
+├── streamlit_app.py
+├── styles.css
 ├── .env.example
 ├── .gitignore
 ├── openapi.json
 ├── PROTOCOL.md
 ├── REFLECTION.md
-└── requirements.txt
+├── requirements.txt
+└── requirements-streamlit.txt
 ```
 
 ## Setup
@@ -74,7 +79,15 @@ uvicorn app.main:app --reload
 - Interactive documentation: `http://127.0.0.1:8000/docs`
 - Runtime-generated OpenAPI: `http://127.0.0.1:8000/openapi.json`
 
-### 5. Example requests
+### 5. Start the Streamlit dashboard
+Open a second terminal, activate the same virtual environment, and run:
+
+```bash
+streamlit run streamlit_app.py
+```
+The dashboard uses the API's application login. The backend remains responsible for validating the session and accessing the portal. For deployment, use HTTPS and restrict access to the Streamlit service as well as the API.
+
+### 6. Example requests
 
 ```bash
 curl http://127.0.0.1:8000/api/v1/health
