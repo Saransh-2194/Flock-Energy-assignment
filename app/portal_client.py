@@ -11,11 +11,15 @@ class PortalError(RuntimeError):
 
 class PortalClient:
     MAX_RESPONSE_BYTES = 5 * 1024 * 1024  # 5 MiB cap for upstream JSON payloads
+    # Login route and field names are provisional; verify against DevTools.
+    # This client deliberately does not call /portal/keys or use signingSecret.
 
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(
             base_url=settings.portal_base_url.rstrip("/"),
             timeout=settings.portal_timeout_seconds,
+            # Do not follow upstream redirects: redirects could send requests to an
+            # unexpected host. Login cookies are still retained from the response.
             follow_redirects=False,
             headers={"Accept": "application/json, text/html;q=0.9"},
         )
@@ -35,26 +39,28 @@ class PortalClient:
             settings.portal_password_field: settings.portal_password,
         }
         try:
-            response = await self._client.post(
+                        response = await self._client.post(
                 settings.portal_login_path,
                 data=payload,
                 headers={
                     "Origin": "https://urja-ops.flockenergy.tech",
                     "Referer": "https://urja-ops.flockenergy.tech/",
-                },
-            )
+                },)
         except httpx.HTTPError as exc:
-            raise PortalError(f"Could not reach portal login endpoint.") from exc
+            raise PortalError("The upstream login service could not be reached.") from exc
 
         if response.is_error:
-            raise PortalError(f"Portal login failed.")
+            raise PortalError("Portal login failed.")
 
+        # A 200/redirect does not prove login succeeded. A protected request below
+        # is the practical check; refine this if the portal has a clear login signal.
         self._login_attempted = True
 
     async def get_json(self, path: str, params: dict[str, Any] | None = None) -> Any:
         await self.login()
         try:
-            # Streamed the response so oversized upstream bodies can be rejected
+            # Stream the response so oversized upstream bodies can be rejected
+            # before buffering the entire payload in memory.
             async with self._client.stream("GET", path, params=params) as response:
                 if response.status_code in (401, 403):
                     self._login_attempted = False
@@ -89,3 +95,6 @@ class PortalClient:
     async def list_transformers(self, page: int = 1) -> Any:
         return await self.get_json("/portal/dts", {"page": page})
 
+    async def export_meters(self, page: int = 1) -> Any:
+        # page=1 was observed to return all data; other page behavior is unknown.
+        return await self.get_json("/portal/export", {"page": page})

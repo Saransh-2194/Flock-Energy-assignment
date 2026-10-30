@@ -1,7 +1,7 @@
 """API route tests; all portal calls are faked so tests never need credentials/network."""
 import pytest
 from fastapi.testclient import TestClient
-
+from app.config import settings
 from app import main
 from app.portal_client import PortalError
 
@@ -41,8 +41,21 @@ def fake_portal():
 @pytest.fixture
 def client(monkeypatch, fake_portal):
     monkeypatch.setattr(main, "get_portal", lambda: fake_portal)
-    # No lifespan context is needed: get_portal is replaced with the fake.
-    return TestClient(main.app)
+
+    test_client = TestClient(main.app)
+
+    response = test_client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": settings.app_username,
+            "password": settings.app_password,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+
+    yield test_client
+    test_client.close()
 
 
 def test_health_returns_ok(client):

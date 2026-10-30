@@ -1,0 +1,181 @@
+
+:root {
+    --navy: #14243b;
+    --navy-2: #1b2e49;
+    --blue: #245d86;
+    --ink: #17253b;
+    --muted: #64748b;
+    --line: #dce4ed;
+    --canvas: #f3f6fa;
+}
+
+.stApp {
+    background: var(--canvas);
+    color: var(--ink);
+}
+
+html, body, [class*="css"] {
+    color: var(--ink);
+}
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background: var(--navy);
+    border-right: 1px solid #263c59;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #ffffff !important;
+}
+
+/* Hero */
+.hero, .login-hero {
+    background: linear-gradient(120deg, #14243b, #244b70);
+    border-radius: 18px;
+    padding: 2rem 2.2rem;
+    margin-bottom: 1.5rem;
+    color: #ffffff;
+}
+
+.hero h1, .login-hero h1 {
+    color: #ffffff !important;
+}
+
+.hero p, .login-hero p {
+    color: #e5edf6 !important;
+}
+
+.eyebrow {
+    color: #b9d7ed !important;
+    font-size: .72rem;
+    font-weight: 700;
+    letter-spacing: .14em;
+}
+
+/* Metric cards */
+div[data-testid="stMetric"] {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 1rem;
+}
+
+div[data-testid="stMetricLabel"] p {
+    color: #52647a !important;
+}
+
+div[data-testid="stMetricValue"] {
+    color: #17253b !important;
+}
+
+div[data-testid="stMetricDelta"] {
+    color: #52647a !important;
+}
+
+/* Input labels */
+.stTextInput label,
+.stNumberInput label,
+.stSelectbox label,
+.stMultiSelect label,
+.stRadio label {
+    color: #26384f !important;
+    font-weight: 600;
+}
+
+/* Input fields */
+.stTextInput input,
+.stNumberInput input,
+.stSelectbox div[data-baseweb="select"],
+.stMultiSelect div[data-baseweb="select"] {
+    color: #17253b !important;
+    background: #ffffff !important;
+}
+
+input::placeholder {
+    color: #718096 !important;
+    opacity: 1;
+}
+
+/* ALL BUTTONS: white text */
+.stButton > button,
+.stFormSubmitButton > button,
+button[kind="primary"],
+button[kind="secondary"] {
+    background: #245d86 !important;
+    color: #ffffff !important;
+    border: 1px solid #245d86 !important;
+    border-radius: 9px !important;
+    font-weight: 650 !important;
+}
+
+.stButton > button *,
+.stFormSubmitButton > button *,
+button[kind="primary"] *,
+button[kind="secondary"] * {
+    color: #ffffff !important;
+}
+
+.stButton > button:hover,
+.stFormSubmitButton > button:hover {
+    background: #173f60 !important;
+    border-color: #173f60 !important;
+    color: #ffffff !important;
+}
+
+.stButton > button:disabled,
+.stFormSubmitButton > button:disabled {
+    background: #718096 !important;
+    color: #ffffff !important;
+    opacity: .75;
+}
+
+/* PLOTLY CHARTS */
+div[data-testid="stPlotlyChart"] {
+    background: #14243b !important;
+    border: 1px solid #263c59;
+    border-radius: 14px;
+    padding: .45rem;
+}
+
+/* Chart text and SVG text */
+div[data-testid="stPlotlyChart"] text {
+    fill: #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* Chart toolbar */
+div[data-testid="stPlotlyChart"] .modebar-btn path {
+    fill: #ffffff !important;
+}
+
+/* Tables */
+[data-testid="stDataFrame"],
+[data-testid="stTable"] {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Alerts */
+[data-testid="stAlert"] p {
+    color: #26384f !important;
+}
+
+/* Expanders */
+.streamlit-expanderHeader {
+    color: #26384f !important;
+    font-weight: 650;
+}
+
+/* Captions */
+.stCaption,
+[data-testid="stCaptionContainer"] {
+    color: #64748b !important;
+}
+
+/* Map tooltips */
+.deck-tooltip {
+    color: #ffffff !important;
+    background: #14243b !important;
+    border: 1px solid #52647a !important;
+}
