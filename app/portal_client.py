@@ -10,14 +10,13 @@ class PortalError(RuntimeError):
 
 
 class PortalClient:
-    # Login route and field names are provisional; verify against DevTools.
-    # This client deliberately does not call /portal/keys or use signingSecret.
+    MAX_RESPONSE_BYTES = 5 * 1024 * 1024  # 5 MiB cap for upstream JSON payloads
 
     def __init__(self) -> None:
         self._client = httpx.AsyncClient(
             base_url=settings.portal_base_url.rstrip("/"),
             timeout=settings.portal_timeout_seconds,
-            follow_redirects=True,
+            follow_redirects=False,
             headers={"Accept": "application/json, text/html;q=0.9"},
         )
         self._login_attempted = False
@@ -44,47 +43,39 @@ class PortalClient:
                     "Referer": "https://urja-ops.flockenergy.tech/",
                 },
             )
-            print("Login status:", response.status_code)
-            print("Login URL:", response.url)
-            print("Redirect history:", [
-                r.status_code for r in response.history
-            ])
-            print("Response type:", response.headers.get("content-type"))
-            print("Redirect target:", response.headers.get("location"))
-            print("Response preview:", response.text[:300])
         except httpx.HTTPError as exc:
-            raise PortalError(f"Could not reach portal login endpoint ({type(exc).__name__}).") from exc
+            raise PortalError(f"Could not reach portal login endpoint.") from exc
 
         if response.is_error:
-            raise PortalError(f"Portal login returned HTTP {response.status_code}.")
+            raise PortalError(f"Portal login failed.")
 
-        # A 200/redirect does not prove login succeeded. A protected request below
-        # is the practical check; refine this if the portal has a clear login signal.
         self._login_attempted = True
 
     async def get_json(self, path: str, params: dict[str, Any] | None = None) -> Any:
         await self.login()
         try:
-            response = await self._client.get(path, params=params)
+            # Streamed the response so oversized upstream bodies can be rejected
+            async with self._client.stream("GET", path, params=params) as response:
+                if response.status_code in (401, 403):
+                    self._login_attempted = False
+                    raise PortalError("Portal authentication failed or the session expired.")
+                if response.is_error:
+                    raise PortalError("Portal request was rejected by the upstream service.")
+
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    if len(body) + len(chunk) > self.MAX_RESPONSE_BYTES:
+                        raise PortalError("The upstream response exceeded the allowed size limit.")
+                    body.extend(chunk)
+                try:
+                    import json
+                    return json.loads(body)
+                except (ValueError, UnicodeDecodeError) as exc:
+                    raise PortalError("The upstream service returned an invalid response format.") from exc
         except httpx.TimeoutException as exc:
             raise PortalError("Portal request timed out.") from exc
         except httpx.HTTPError as exc:
-            raise PortalError(f"Portal request failed ({type(exc).__name__}).") from exc
-
-        if response.status_code in (401, 403):
-            self._login_attempted = False
-            raise PortalError(
-                f"Portal returned HTTP {response.status_code}; session may have expired."
-            )
-        if response.is_error:
-            raise PortalError(f"Portal returned HTTP {response.status_code}.")
-        try:
-            return response.json()
-        except ValueError as exc:
-            raise PortalError(
-                f"Expected JSON from {path}; received "
-                f"{response.headers.get('content-type', 'unknown content type')}."
-            ) from exc
+            raise PortalError("The upstream service could not be reached.") from exc
 
     async def search_meters(self, q: str = "", page: int = 1) -> Any:
         return await self.get_json("/portal/meters/search", {"q": q, "page": page})
@@ -97,3 +88,4 @@ class PortalClient:
 
     async def list_transformers(self, page: int = 1) -> Any:
         return await self.get_json("/portal/dts", {"page": page})
+

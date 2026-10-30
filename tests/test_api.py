@@ -108,7 +108,13 @@ def test_portal_errors_are_returned_as_502(client, fake_portal):
     fake_portal.error = PortalError("Portal returned HTTP 503.")
     response = client.get("/api/v1/meters")
     assert response.status_code == 502
-    assert response.json()["detail"] == "Portal returned HTTP 503."
+    assert response.json() == {
+        "error": {
+            "code": "UPSTREAM_ERROR",
+            "message": "The upstream service could not complete the request.",
+        }
+    }
+    assert "Portal returned HTTP 503" not in response.text
 
 
 def test_openapi_json_is_available(client):
@@ -118,3 +124,49 @@ def test_openapi_json_is_available(client):
     assert spec["info"]["title"] == "Flock Meter API"
     assert "/api/v1/meters/{meter_id}/geo" in spec["paths"]
     assert "/api/v1/meters/{meter_id}/energy" in spec["paths"]
+
+
+@pytest.mark.parametrize("path", [
+    "/api/v1/meters/../../etc/passwd/geo",
+    "/api/v1/meters/" + ("A" * 129) + "/geo",
+    "/api/v1/meters/bad%2Fid/energy",
+])
+def test_meter_id_rejects_path_injection_or_excessive_length(client, fake_portal, path):
+    response = client.get(path)
+    assert response.status_code in (400, 404, 422)
+    assert not fake_portal.calls
+
+
+def test_validation_errors_use_custom_message_and_hide_submitted_value(client):
+    secretish_input = "SENSITIVE-" + ("x" * 201)
+    response = client.get("/api/v1/meters", params={"q": secretish_input})
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+    assert response.json()["error"]["message"] == "One or more request parameters are invalid."
+    assert secretish_input not in response.text
+    assert "detail" not in response.json()
+
+
+def test_oversized_page_is_rejected(client, fake_portal):
+    response = client.get("/api/v1/meters", params={"page": "10001"})
+    assert response.status_code == 422
+    assert not fake_portal.calls
+
+
+def test_upstream_error_message_does_not_leak_secret(client, fake_portal):
+    fake_portal.error = PortalError("password=very-secret-value; cookie=private-cookie")
+    response = client.get("/api/v1/meters")
+    assert response.status_code == 502
+    assert "very-secret-value" not in response.text
+    assert "private-cookie" not in response.text
+
+
+def test_unknown_route_uses_custom_not_found_message(client):
+    response = client.get("/does-not-exist")
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "code": "NOT_FOUND",
+            "message": "The requested resource was not found.",
+        }
+    }

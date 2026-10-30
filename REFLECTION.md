@@ -1,10 +1,8 @@
 # Reflection
 
-> Draft: update after running and testing the implementation. Keep every statement truthful.
-
 ## What assumptions did you make?
 
-I assumed the portal could be integrated through normal authenticated HTTP requests because browser investigation exposed several route patterns. I treated bulk export as a promising source because the observed `page=1` request returned all meter data and a total record count. I have not verified whether other pages return identical records or subsets.
+I assumed the portal could be integrated through authenticated HTTP requests because the browser's Network panel showed the routes used to load its data. I also assumed the export endpoint could be useful for retrieving meter data in bulk. The first export request returned meter data along with a total record count, but I have not confirmed what the secretSigning key does.
 
 ## Which part was most difficult, and how did you get unstuck?
 
@@ -12,12 +10,12 @@ The main challenge was separating observed behavior from assumptions about the p
 
 ## If you had another day, what would you improve?
 
-I would verify authentication and session expiry, compare export pages, define explicit response models, and add automated tests with mocked upstream responses. Based on measured dataset size and freshness requirements, I would evaluate a local index and caching. I would also add structured logging without recording credentials or tokens.
+I would verify authentication and session expiry, compare export pages, and define explicit response models. Based on measured dataset size and freshness requirements, I would evaluate a local index and caching. I would also add structured logging without recording credentials or tokens.
 
 ## What mistake did you make while solving this?
 
-Complete this section after testing. Describe a real mistake, its impact, and what you changed. Do not invent a mistake to fill the section.
+One thing I could have done better was trying to build the API before fully understanding the portal's request and authentication flow. This meant some parts of the integration were based on assumptions and needed revisiting. Inspecting the Network panel helped me understand the actual requests, and I used those findings to guide the implementation. For example i spent a good chunk of my time debugging why my the upstream was throwing login error 403 and finally figured how the authentication works on the site.
 
 ## If you were reviewing your own submission, what would you criticise?
 
-The starter passes upstream JSON through instead of enforcing a stable normalized schema. Login configuration and success detection must be validated against the actual portal. Export pagination and the signing-secret purpose remain unresolved, and automated tests are not yet complete. These are known limitations, not claims of production readiness.
+The starter passes upstream JSON through instead of enforcing a stable normalized schema. Login configuration and success detection must be validated against the actual portal. Export pagination and the signing-secret purpose remain unresolved, and the test coverage can be improved and more checks for unexpected upstream responses can be added. These are known limitations, not claims of production readiness.

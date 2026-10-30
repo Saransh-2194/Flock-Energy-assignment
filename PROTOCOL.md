@@ -1,58 +1,29 @@
-# Urja Meter Ops — Protocol Notes
+# How the Urja Ops portal works
 
-## Evidence status
+I explored the portal by logging in through the browser and checking the requests it made in the Network tab. The portal is a web interface over a set of JSON endpoints. The API in this project uses those same read-only endpoints instead of scraping the pages.
 
-This document records observations from normal, authorized portal use. It separates observed behavior from unresolved assumptions. Exact response schemas, login details, and export pagination semantics remain to be verified.
+## What data is available
 
-## Observed routes
+- **Meters:** the portal can search and list meters through `/portal/meters/search`, using `q` for the search text and `page` for the page number.
+- **Meter location/network details:** `/portal/meters/{meter_id}/geo` returns the geo-related data for an individual meter.
+- **Meter energy data:** `/portal/meters/{meter_id}/energy` returns energy-related data for an individual meter.
+- **Transformers:** `/portal/dts` provides the transformer/DT listing and accepts a page number.
+- **Meter export:** `/portal/export?page=1` returned meter data along with a total record count when I inspected it.
 
-| Purpose | Route | Observation |
-|---|---|---|
-| Meter search | `GET /portal/meters/search?q=&page=1` | Meter list/search; paginated. |
-| Meter geo/network data | `GET /portal/meters/{meter_id}/geo` | Per-meter route; exact response fields need inspection. |
-| Meter energy | `GET /portal/meters/{meter_id}/energy` | Per-meter consumption-related route; units/time range need inspection. |
-| Transformer list | `GET /portal/dts?page=1` | Transformer listing; pagination details need confirmation. |
-| Key endpoint | `GET /portal/keys` | JSON includes `data.signingSecret`; the actual value is intentionally not recorded. |
-| Export | `GET /portal/export?page=1` | In the observed request, returned all meter data and a total record count. |
+The portal also has a `/portal/keys` endpoint. Its response includes a `signingSecret` field. I did not use or copy this value because its purpose was not clear from the requests I inspected.
 
-## Authentication
+## How I accessed the data
 
-The portal requires login. During investigation, the login flow was described as exposing the email and password in the login URL. Verify whether the credentials are actually in the URL or in a POST request body: these have different security implications. Login method/path, field names, redirects, cookies, and session-expiry behavior still need to be recorded.
+After opening the portal and signing in, I used the browser's Developer Tools **Network** tab to inspect the requests made while using the meter search, meter details, transformer listing and export features. This revealed the endpoint paths and query parameters listed above. The project calls these endpoints directly and passes the JSON responses back through its own FastAPI routes.
 
-If credentials genuinely appear in a URL, report it to the portal owner. URLs can be retained in browser history and logs. The API should use the normal authorized login flow, not bypass authentication.
+One other things I noticed was the search functionality, it sends an api request after every word or within a very small time. this increase the api calls and puts unnecessary pressure on the DB and can be easily solved by Debouncing
 
-## Export and signing secret
+## Login and access
 
-`/portal/keys` returns JSON with a `data.signingSecret` field. The secret value is deliberately excluded from this document and must not be committed to source control.
+The portal requires a login. The browser login flow uses the fields `email` and `password`. After login, the browser receives a session cookie named `__Secure-better-auth.session_token`; requests to protected endpoints use that session to identify the logged-in user.
 
-The observed `/portal/export?page=1` request returned all meter data and a total record count. The request was reported to have only the `page` query parameter.
+During my investigation, a direct login request was rejected with `403` unless it included the browser's `Origin` and `Referer` headers. This suggests the portal checks the context of the login request as well as the credentials. The project uses a persistent HTTP client so it can retain session cookies, but its live login flow still needs to be tested against the portal.
 
-Unresolved:
-- Does `page=2` return the same dataset, a subset, or an error?
-- Does export depend on session cookies, a signature, or another request context?
-- What does `signingSecret` do, and is `/portal/keys` needed in the normal export workflow?
-- What is the complete export schema?
+## What is not confirmed yet
 
-Do not infer or implement a signing scheme before establishing the normal request flow. Do not store real secret values in source code or documentation.
-
-## Search behavior
-
-The portal search bar was observed to have no debounce. Successive keystrokes may trigger separate requests. The actual traffic and performance impact have not been benchmarked.
-
-Debouncing belongs in the client UI; the API should handle explicit requests without adding artificial debounce delays. If a UI is built, use client-side debounce and stale-response protection.
-
-## Pagination
-
-Meter search and transformer listing accept a `page` parameter. Export's semantics are unverified: one `page=1` request returned all data. The starter preserves the parameter without assuming that the export is truly paginated.
-
-## Current client strategy
-
-The starter uses a persistent `httpx.AsyncClient` for session cookies and maps the observed routes to API methods. Login configuration is environment-driven because the actual login details are not yet confirmed. It does not disable TLS verification and does not use the `signingSecret`.
-
-## Next investigation steps
-
-1. Record the login method/path, field names, redirect chain, cookies, and session behavior.
-2. Capture redacted sample responses for search, geo, energy, transformers, and export.
-3. Compare export pages 1 and 2 using record IDs and counts.
-4. Establish whether `/portal/keys` is required in the normal export workflow without attempting to forge or bypass security.
-5. Record representative error responses and session expiry behavior.
+I have not fully confirmed the exact response fields for every endpoint. The purpose of the `signingSecret` field is also unknown.

@@ -3,7 +3,7 @@
   "info": {
     "title": "Flock Meter API",
     "version": "1.0.0",
-    "description": "Read-only API facade over Urja Meter Ops. Upstream response schemas are provisional and passed through by the starter implementation."
+    "description": "Read-only API built over Urja Meter Ops."
   },
   "servers": [
     {
